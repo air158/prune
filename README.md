@@ -77,10 +77,10 @@ git log --oneline --grep="fitness(web-search)"
 ## Roadmap
 
 - [x] `prune check` — scan registry, output ranked fitness report
-- [ ] `prune update-fitness` — update frontmatter after each session, git commit
-- [ ] `prune deprecate` — archive a skill, write RETIRE.md, git commit
-- [ ] `prune promote` — move staging skill to active
-- [ ] `prune similarity-check` — pre-commit hook, block duplicate skills
+- [x] `prune update-fitness` — update frontmatter after each session, git commit
+- [x] `prune deprecate` — archive a skill, write RETIRE.md, git commit
+- [x] `prune promote` — move staging skill to active
+- [x] `prune similarity-check` — detect duplicate skills before they're created
 - [ ] PyPI packaging (`pip install prune-cli`)
 
 ## Design
