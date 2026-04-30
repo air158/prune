@@ -108,12 +108,11 @@ def load_registry(skills_dir: Optional[str] = None) -> tuple[list[Skill], list[s
 
 
 def find_skill(skills_dir: Optional[str], skill_name: str) -> Optional[Skill]:
-    """Locate a skill by name anywhere in the registry (active, staging, root)."""
+    """Locate a skill by name anywhere in the registry, including category subdirectories."""
     root = get_skills_root(skills_dir)
 
-    for subdir in ["active", "staging", ""]:
-        candidate = (root / subdir / skill_name / "SKILL.md") if subdir else (root / skill_name / "SKILL.md")
-        if candidate.exists():
-            return _parse_skill(candidate, root)
+    for skill_md in root.rglob("SKILL.md"):
+        if skill_md.parent.name == skill_name:
+            return _parse_skill(skill_md, root)
 
     return None
