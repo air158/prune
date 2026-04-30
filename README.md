@@ -21,7 +21,7 @@ The research community has ADD/UPDATE/DELETE pipelines for memory. The skill eco
 ## Install
 
 ```bash
-git clone https://github.com/your-username/prune.git
+git clone https://github.com/air158/prune.git
 cd prune
 pip install -r requirements.txt
 ```
