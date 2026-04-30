@@ -30,7 +30,7 @@ def cmd_check(args: argparse.Namespace) -> None:
 
     table = Table(box=box.SIMPLE_HEAD, show_footer=False)
     table.add_column("Skill", style="bold")
-    table.add_column("Status")
+    table.add_column("Location")
     table.add_column("Utility", justify="right")
     table.add_column("Cold Days", justify="right")
     table.add_column("Data Source")
@@ -46,7 +46,7 @@ def cmd_check(args: argparse.Namespace) -> None:
 
         table.add_row(
             skill.name,
-            skill.status,
+            skill.location,
             utility_str,
             str(cd),
             data_source,
@@ -68,24 +68,121 @@ def cmd_check(args: argparse.Namespace) -> None:
             console.print(f"[yellow]⚠ {w}[/yellow]")
 
 
-def main() -> None:
+def cmd_update_fitness(args: argparse.Namespace) -> None:
+    from prune.fitness import cmd_update_fitness as _run
+    _run(
+        skills_dir=args.dir,
+        skill_name=args.skill,
+        result=getattr(args, "result", None),
+        calls=getattr(args, "calls", 0) or 0,
+        success=getattr(args, "success", 0) or 0,
+        no_git=args.no_git,
+    )
+
+
+def cmd_deprecate(args: argparse.Namespace) -> None:
+    from prune.lifecycle import cmd_deprecate as _run
+    _run(
+        skills_dir=args.dir,
+        skill_name=args.skill,
+        reason=args.reason,
+        successor=getattr(args, "successor", None),
+        yes=args.yes,
+        no_git=args.no_git,
+    )
+
+
+def cmd_promote(args: argparse.Namespace) -> None:
+    from prune.lifecycle import cmd_promote as _run
+    _run(
+        skills_dir=args.dir,
+        skill_name=args.skill,
+        yes=args.yes,
+        no_git=args.no_git,
+    )
+
+
+def cmd_similarity_check(args: argparse.Namespace) -> None:
+    from prune.similarity import cmd_similarity_check as _run
+    _run(
+        skills_dir=args.dir,
+        skill_name=args.skill,
+        description=getattr(args, "description", None),
+        threshold=args.threshold,
+    )
+
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="prune",
         description="Skill lifecycle manager for Hermes Agent",
     )
     sub = parser.add_subparsers(dest="command")
 
-    check_parser = sub.add_parser("check", help="Scan registry and show fitness report")
-    check_parser.add_argument(
-        "--dir",
-        metavar="PATH",
-        help="Path to skills directory (default: ~/.hermes/skills/)",
-    )
+    # ── check ──────────────────────────────────────────────────────────────
+    p_check = sub.add_parser("check", help="Scan registry and show fitness report")
+    p_check.add_argument("--dir", metavar="PATH",
+                         help="Skills directory (default: ~/.hermes/skills/)")
 
+    # ── update-fitness ─────────────────────────────────────────────────────
+    p_uf = sub.add_parser("update-fitness", help="Record a session result for a skill")
+    p_uf.add_argument("skill", help="Skill name")
+    p_uf.add_argument("--result", choices=["success", "failure"],
+                      help="Session result (shortcut for --calls 1 --success 0|1)")
+    p_uf.add_argument("--calls", type=int, default=0,
+                      help="Number of calls to add (default: 0)")
+    p_uf.add_argument("--success", type=int, default=0,
+                      help="Number of successful calls to add (default: 0)")
+    p_uf.add_argument("--dir", metavar="PATH")
+    p_uf.add_argument("--no-git", action="store_true",
+                      help="Skip git commit")
+
+    # ── deprecate ──────────────────────────────────────────────────────────
+    p_dep = sub.add_parser("deprecate", help="Archive a skill")
+    p_dep.add_argument("skill", help="Skill name")
+    p_dep.add_argument("--reason", required=True,
+                       choices=["cold", "low-utility", "merged", "superseded", "security"])
+    p_dep.add_argument("--successor", metavar="SKILL",
+                       help="Name of the skill that replaces this one")
+    p_dep.add_argument("--yes", "-y", action="store_true",
+                       help="Skip confirmation prompt")
+    p_dep.add_argument("--dir", metavar="PATH")
+    p_dep.add_argument("--no-git", action="store_true")
+
+    # ── promote ────────────────────────────────────────────────────────────
+    p_pro = sub.add_parser("promote", help="Move a staging skill to active")
+    p_pro.add_argument("skill", help="Skill name")
+    p_pro.add_argument("--yes", "-y", action="store_true")
+    p_pro.add_argument("--dir", metavar="PATH")
+    p_pro.add_argument("--no-git", action="store_true")
+
+    # ── similarity-check ───────────────────────────────────────────────────
+    p_sim = sub.add_parser("similarity-check",
+                           help="Check if a skill name/description overlaps with existing skills")
+    p_sim.add_argument("skill", help="New skill name to check")
+    p_sim.add_argument("--description", "-d", metavar="TEXT",
+                       help="Description of the new skill")
+    p_sim.add_argument("--threshold", type=float, default=0.85,
+                       help="Cosine similarity threshold (default: 0.85)")
+    p_sim.add_argument("--dir", metavar="PATH")
+
+    return parser
+
+
+def main() -> None:
+    parser = build_parser()
     args = parser.parse_args()
 
-    if args.command == "check":
-        cmd_check(args)
+    dispatch = {
+        "check": cmd_check,
+        "update-fitness": cmd_update_fitness,
+        "deprecate": cmd_deprecate,
+        "promote": cmd_promote,
+        "similarity-check": cmd_similarity_check,
+    }
+
+    if args.command in dispatch:
+        dispatch[args.command](args)
     else:
         parser.print_help()
         sys.exit(1)
